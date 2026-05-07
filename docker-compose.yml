@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  # ----------------------------------------------------
+  # Frontend React Service
+  # ----------------------------------------------------
+  frontend:
+    build: ./frontend
+    container_name: nutri_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # ----------------------------------------------------
+  # Backend FastAPI Service
+  # ----------------------------------------------------
+  backend:
+    build: ./backend
+    container_name: nutri_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGODB_URL=mongodb://mongo:27017
+      - ML_SERVICE_URL=http://ml_service:8001
+    depends_on:
+      - mongo
+      - ml_service
+    restart: unless-stopped
+
+  # ----------------------------------------------------
+  # Machine Learning & AI Microservice
+  # ----------------------------------------------------
+  ml_service:
+    build: ./ml-service
+    container_name: nutri_ml_service
+    ports:
+      - "8001:8001"
+    restart: unless-stopped
+
+  # ----------------------------------------------------
+  # MongoDB Database Service
+  # ----------------------------------------------------
+  mongo:
+    image: mongo:latest
+    container_name: nutri_mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
