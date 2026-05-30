@@ -4,7 +4,7 @@ A complete production-ready application to accurately track food intake, perform
 
 ---
 
-## 🎨 Tech Stack :
+## 🎨 Tech Stack 
 - **Frontend**: React (Vite) + Tailwind CSS
 - **Backend API**: Node.js (Express)
 - **Database**: MongoDB
