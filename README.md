@@ -1,6 +1,6 @@
 # 🍏 Smart Food Intake & Health Monitoring System
 
-A complete production-ready application to accurately track food intake, perform multi-modal entries (text & voice), compute nutritional value seamlessly, and offer specialized health recommendations—with special intelligence geared towards diabetic management.
+A complete production-ready application to accurately track food intake, perform multi-modal entries (text & voice), compute nutritional value seamlessly, and offer specialized health recommendations—with special intelligence geared towards diabetic management and helping users to stay motivated in healthy living.
 
 ---
 
