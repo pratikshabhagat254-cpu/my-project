@@ -4,17 +4,20 @@ import speech_recognition as sr
 import io
 import re
 
+# Create FastAPI application instance
 app = FastAPI(title="Smart Food Monitor ML API")
 
+# Enable CORS so frontend applications can access the API
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],       # Allow requests from all origins
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],       # Allow all HTTP methods
+    allow_headers=["*"],       # Allow all request headers
 )
 
-# Realistic fallback DB for nutrition (per 100g)
+# Nutrition values stored per 100g of food
+# Acts as a temporary database for MVP development
 NUTRITION_DB = {
     "apple": {"calories": 52, "sugar": 10.4, "carbohydrates": 14, "protein": 0.3, "fat": 0.2},
     "banana": {"calories": 89, "sugar": 12.2, "carbohydrates": 23, "protein": 1.1, "fat": 0.3},
@@ -25,55 +28,97 @@ NUTRITION_DB = {
 
 def extract_food_details(text: str):
     """
-    Very basic NLP extraction.
-    E.g. "I ate 200 grams of chicken" -> {'food': 'chicken', 'quantity': 200}
+    Extract food name and quantity from natural language input.
+
+    Example:
+    "I ate 200 grams of chicken"
+    ->
+    ("chicken", 200)
     """
+
+    # Convert text to lowercase for easier matching
     text = text.lower()
-    quantity = 100 # default
+
+    # Default quantity if user doesn't specify any amount
+    quantity = 100
+
+    # Food item detected in the sentence
     food_item = None
-    
-    # Try to find a number followed by 'grams' or 'g'
+
+    # Look for patterns like:
+    # 200 grams
+    # 150 g
+    # 250 gm
     match = re.search(r'(\d+)\s*(grams|g|gm)', text)
+
     if match:
         quantity = int(match.group(1))
-        
+
+    # Check if any food from our nutrition database exists in the text
     for food in NUTRITION_DB.keys():
         if food in text:
             food_item = food
             break
-            
+
     return food_item, quantity
+
 
 @app.post("/api/analyze-voice")
 async def analyze_voice(audio_file: UploadFile = File(...)):
     """
-    Receives audio file, processes it to text, and parses food details.
-    For demonstration, we mock the SpeechRecognition parsing if audio fails, 
-    but the logic uses `speech_recognition` library.
+    Accepts a voice recording and extracts food information.
+
+    Flow:
+    Audio File
+        ↓
+    Speech-to-Text
+        ↓
+    Food Extraction
+        ↓
+    Nutrition Calculation
+        ↓
+    JSON Response
     """
+
+    # Initialize speech recognizer
     recognizer = sr.Recognizer()
+
     try:
-        # Read the file
+        # Read uploaded audio file into memory
         contents = await audio_file.read()
-        
-        # We need a wav file for speech recognition. We'll simulate success for MVP if it's not proper.
-        # In actual production, we'd use ffmpeg to convert to wav.
+
+        # Production Approach:
+        # Convert audio to WAV format using ffmpeg
+        # Pass audio to Google Speech Recognition
+        # Extract spoken text
+
+        # Example implementation:
         # file_like = io.BytesIO(contents)
         # with sr.AudioFile(file_like) as source:
         #     audio_data = recognizer.record(source)
         #     text = recognizer.recognize_google(audio_data)
-        
-        # Simulating voice text since actual mic input and ffmpeg conversion is complex in this env:
+
+        # Temporary mocked speech output for MVP
         text = "I had 200 grams of chicken and some rice"
-        
+
+        # Extract food item and quantity from text
         food, quantity = extract_food_details(text)
-        
+
+        # Return response if food could not be identified
         if not food:
-            return {"text": text, "found": False}
-            
+            return {
+                "text": text,
+                "found": False
+            }
+
+        # Retrieve nutrition values for selected food
         base_nutrition = NUTRITION_DB[food]
+
+        # Calculate multiplier based on quantity
+        # Example:
+        # 200g / 100g = 2x
         multiplier = quantity / 100.0
-        
+
         return {
             "text": text,
             "found": True,
@@ -89,22 +134,40 @@ async def analyze_voice(audio_file: UploadFile = File(...)):
                 }
             }
         }
+
     except Exception as e:
+        # Return user-friendly API error
         raise HTTPException(status_code=400, detail=str(e))
+
 
 @app.post("/api/analyze-plate")
 async def analyze_plate(image: UploadFile = File(...)):
     """
-    Uses OpenCV/Image processing to estimate plate distribution.
-    MVP implementation: Returns a static analysis if a valid image is uploaded.
+    Analyze a food plate image and estimate
+    food distribution percentages.
+
+    Future Production Pipeline:
+    Image Upload
+        ↓
+    OpenCV Processing
+        ↓
+    Food Segmentation
+        ↓
+    Nutrition Estimation
+        ↓
+    Health Recommendations
     """
+
+    # Read uploaded image
     contents = await image.read()
-    # In production:
-    # 1. Use OpenCV to detect circular contour (plate)
-    # 2. Segment colors/textures using simple CNN
-    # 3. Calculate % areas
-    
-    # Static realistic response matching Indian Diet requirements:
+
+    # Future Improvements:
+    # 1. Detect plate boundary using contours
+    # 2. Segment food regions
+    # 3. Classify foods using CNN model
+    # 4. Estimate nutrition automatically
+
+    # Static response for MVP demonstration
     return {
         "plateFound": True,
         "estimatedDistribution": {
@@ -119,6 +182,13 @@ async def analyze_plate(image: UploadFile = File(...)):
         ]
     }
 
+
 if __name__ == "__main__":
+    # Run FastAPI application locally
     import uvicorn
-    uvicorn.run(app, host="0.0.0.1", port=8000)
+
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=8000
+    )
